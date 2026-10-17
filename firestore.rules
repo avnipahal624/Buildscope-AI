@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validation: UserProfile
+    function isValidUserProfile(data) {
+      return data.id is string && data.id == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() <= 128 &&
+             (!('institution' in data) || (data.institution is string && data.institution.size() <= 128)) &&
+             (!('role' in data) || (data.role is string && (data.role == 'Curator' || data.role == 'Fellow' || data.role == 'Researcher' || data.role == 'Reviewer'))) &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Entity Validation: Folio
+    function isValidFolio(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.authorId is string && data.authorId == request.auth.uid &&
+             data.title is string && data.title.size() <= 256 &&
+             (!('specRef' in data) || (data.specRef is string && data.specRef.size() <= 64)) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 64)) &&
+             data.status is string && (data.status == 'Active' || data.status == 'Experimental' || data.status == 'Archived' || data.status == 'Blocked') &&
+             (!('feasibilityScore' in data) || data.feasibilityScore is number) &&
+             (!('trlLevel' in data) || data.trlLevel is number) &&
+             data.createdAt is string && data.createdAt.size() <= 64 &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Entity Validation: Inquiry
+    function isValidInquiry(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.authorId is string && data.authorId == request.auth.uid &&
+             data.name is string && data.name.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             (!('inquiryType' in data) || (data.inquiryType is string && data.inquiryType.size() <= 128)) &&
+             data.message is string && data.message.size() <= 2048 &&
+             (!('isUrgent' in data) || data.isUrgent is bool) &&
+             (!('activeFolio' in data) || (data.activeFolio is string && data.activeFolio.size() <= 256)) &&
+             (!('status' in data) || (data.status is string && (data.status == 'Pending' || data.status == 'Reviewed' || data.status == 'Archived'))) &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // Entity Validation: Annotation
+    function isValidAnnotation(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.authorId is string && data.authorId == request.auth.uid &&
+             data.folioId is string && isValidId(data.folioId) &&
+             data.title is string && data.title.size() <= 256 &&
+             data.text is string && data.text.size() <= 1024 &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 64)) &&
+             (!('metric' in data) || (data.metric is string && data.metric.size() <= 64)) &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    // Match: User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn() && resource.data.id == request.auth.uid;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['id', 'email', 'displayName', 'createdAt']) &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().id == existing().id &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId);
+    }
+
+    // Match: Folios
+    match /folios/{folioId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(folioId) &&
+                       incoming().keys().hasAll(['id', 'authorId', 'title', 'status', 'createdAt']) &&
+                       isValidFolio(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(folioId) &&
+                       isValidFolio(incoming()) &&
+                       incoming().id == existing().id &&
+                       incoming().authorId == existing().authorId &&
+                       incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+    }
+
+    // Match: Inquiries
+    match /inquiries/{inquiryId} {
+      allow get: if isSignedIn() && (existing().authorId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      allow create: if isSignedIn() &&
+                       isValidId(inquiryId) &&
+                       incoming().keys().hasAll(['id', 'authorId', 'name', 'email', 'message', 'createdAt']) &&
+                       isValidInquiry(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(inquiryId) &&
+                       existing().authorId == request.auth.uid &&
+                       isValidInquiry(incoming()) &&
+                       incoming().id == existing().id &&
+                       incoming().authorId == existing().authorId;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+    }
+
+    // Match: Annotations
+    match /annotations/{annotationId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(annotationId) &&
+                       incoming().keys().hasAll(['id', 'authorId', 'folioId', 'title', 'text', 'createdAt']) &&
+                       isValidAnnotation(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(annotationId) &&
+                       existing().authorId == request.auth.uid &&
+                       isValidAnnotation(incoming()) &&
+                       incoming().id == existing().id &&
+                       incoming().authorId == existing().authorId;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+    }
+
+    // Test connection document rule
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

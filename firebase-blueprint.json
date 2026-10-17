@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and credentials in BuildScope AI",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID matching auth.uid",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full name or curator alias",
+          "maxLength": 128
+        },
+        "institution": {
+          "type": "string",
+          "description": "Academic or research institution",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "description": "Curator or researcher role",
+          "enum": ["Curator", "Fellow", "Researcher", "Reviewer"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when profile was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when profile was last updated"
+        }
+      },
+      "required": ["id", "email", "displayName", "createdAt"]
+    },
+    "Folio": {
+      "title": "Folio",
+      "description": "Research dossier and project spec record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique Folio ID",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the creating curator",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the research folio",
+          "maxLength": 256
+        },
+        "specRef": {
+          "type": "string",
+          "description": "Specification reference ID",
+          "maxLength": 64
+        },
+        "category": {
+          "type": "string",
+          "description": "Research domain category",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle state of the folio",
+          "enum": ["Active", "Experimental", "Archived", "Blocked"]
+        },
+        "feasibilityScore": {
+          "type": "number",
+          "description": "Calculated feasibility rating (0-100)"
+        },
+        "trlLevel": {
+          "type": "number",
+          "description": "Technology Readiness Level (1-9)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when folio was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when folio was last updated"
+        }
+      },
+      "required": ["id", "authorId", "title", "status", "createdAt"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Curatorial inquiry and contact message",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique inquiry ticket ID",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the inquirer",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Sender name",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Institutional email",
+          "maxLength": 256
+        },
+        "inquiryType": {
+          "type": "string",
+          "description": "Category of inquiry",
+          "maxLength": 128
+        },
+        "message": {
+          "type": "string",
+          "description": "Detailed inquiry text",
+          "maxLength": 2048
+        },
+        "isUrgent": {
+          "type": "boolean",
+          "description": "Whether inquiry has hardware safety priority"
+        },
+        "activeFolio": {
+          "type": "string",
+          "description": "Associated folio reference",
+          "maxLength": 256
+        },
+        "status": {
+          "type": "string",
+          "description": "Inquiry review status",
+          "enum": ["Pending", "Reviewed", "Archived"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "authorId", "name", "email", "message", "createdAt"]
+    },
+    "Annotation": {
+      "title": "Annotation",
+      "description": "Attached evidence note or telemetry observation",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique annotation ID",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the curator author",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "folioId": {
+          "type": "string",
+          "description": "Associated folio ID",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Annotation title",
+          "maxLength": 256
+        },
+        "text": {
+          "type": "string",
+          "description": "Annotation commentary",
+          "maxLength": 1024
+        },
+        "category": {
+          "type": "string",
+          "description": "Category badge",
+          "maxLength": 64
+        },
+        "metric": {
+          "type": "string",
+          "description": "Telemetry metric reference",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "authorId", "folioId", "title", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile documents"
+    },
+    "/folios/{folioId}": {
+      "schema": { "$ref": "#/entities/Folio" },
+      "description": "Curated spatial research folios"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/Inquiry" },
+      "description": "Encrypted curator inquiries"
+    },
+    "/annotations/{annotationId}": {
+      "schema": { "$ref": "#/entities/Annotation" },
+      "description": "Curatorial annotations and attached telemetry"
+    }
+  }
+}

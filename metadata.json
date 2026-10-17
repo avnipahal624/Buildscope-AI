@@ -1,0 +1,6 @@
+{
+  "name": "BuildScope AI — Spatial Architect Discovery & Feasibility Engine",
+  "description": "Tactile archival spatial engineering workbench for autonomous drone seedling systems, risk matrices, competitor overlap, causal dependency graphs, and buildability passports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
